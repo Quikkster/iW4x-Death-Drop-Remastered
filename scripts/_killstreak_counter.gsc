@@ -63,13 +63,13 @@ killstreakPlayer()
         }
 
         if(isDefined(self.pers["deadDropReady"]) && self.pers["deadDropReady"] > 0 ) {
-            self.deadDeadDropReady.alpha = 1;
+            self.deadDeadDropReady.alpha = 0.7;
             // self.deadDeadDropReady setValue(self.pers["deadDropReady"]);
             self.deadDeadDropReady.label = &" Deaddrop Available :flare: ^7";
         }
         else
         {
-            self.deadDeadDropReady.alpha = 1;
+            self.deadDeadDropReady.alpha = 0.7;
             self.deadDeadDropReady.label = &"";
         }
 
