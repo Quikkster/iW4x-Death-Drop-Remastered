@@ -977,6 +977,11 @@ matchStartTimer_Internal( countTime, matchStartTimer )
 		matchStartTimer setValue( countTime );
 		if ( countTime == 2 ) {
 			visionSetNaked( getDvar( "mapname" ), 3.0 );
+			/* flag set here to prevent glitch that i noticed
+			- bots were killing me immediately upon the timer hitting 0
+			- would cause the game to not have enough time to load the functions that setup the timer
+			- would break and be stuck at "Deaddrop: 10"
+			 */
 			gameFlagSet( "dead_drop" );	
 			level notify("dead_drop");
 		}

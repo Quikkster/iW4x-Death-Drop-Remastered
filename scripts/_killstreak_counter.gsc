@@ -37,11 +37,11 @@ killstreakPlayer()
     self.hudkillstreak.alpha = 0;
     self.hudkillstreak.hideWhenInMenu = true;
 
-    self.hudDeadDropStreak = createFontString ("Objective", 1);
-    self.hudDeadDropStreak setPoint ("CENTER", "TOP", "CENTER", 10);
-    self.hudDeadDropStreak.label = &"^3 Deaddrop Streak: ^7";
-    self.hudDeadDropStreak.alpha = 0;
-    self.hudDeadDropStreak.hideWhenInMenu = true;
+    // self.hudDeadDropStreak = createFontString ("Objective", 1);
+    // self.hudDeadDropStreak setPoint ("CENTER", "TOP", "CENTER", 10);
+    // self.hudDeadDropStreak.label = &"^3 Deaddrop Streak: ^7";
+    // self.hudDeadDropStreak.alpha = 0;
+    // self.hudDeadDropStreak.hideWhenInMenu = true;
 
     self.deadDeadDropReady = createFontString ("Objective", 1);
     self.deadDeadDropReady setPoint ("CENTER", "TOP", "CENTER", 20);
@@ -57,17 +57,26 @@ killstreakPlayer()
             self.hudkillstreak.alpha = 1;
             self.hudkillstreak setValue(self.pers["cur_kill_streak"]);
         }
+        else
+        {
+            self.hudkillstreak.alpha = 0;
+        }
 
         if(isDefined(self.pers["deadDropReady"]) && self.pers["deadDropReady"] > 0 ) {
             self.deadDeadDropReady.alpha = 1;
             // self.deadDeadDropReady setValue(self.pers["deadDropReady"]);
             self.deadDeadDropReady.label = &"^3 Deaddrop Available :flare: ^7";
         }
-
-        if(isDefined(self.pers["deadDropStreak"]) && self.pers["deadDropStreak"] > 0 ) {
-            self.hudDeadDropStreak.alpha = 1;
-            self.hudDeadDropStreak setValue(self.pers["deadDropStreak"]);
+        else
+        {
+            self.deadDeadDropReady.alpha = 1;
+            self.deadDeadDropReady.label = &"";
         }
+
+        // if(isDefined(self.pers["deadDropStreak"]) && self.pers["deadDropStreak"] > 0 ) {
+            // self.hudDeadDropStreak.alpha = 1;
+            // self.hudDeadDropStreak setValue(self.pers["deadDropStreak"]);
+        // }
 
         wait 0.5;
     }

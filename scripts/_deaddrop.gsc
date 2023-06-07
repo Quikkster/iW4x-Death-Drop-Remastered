@@ -129,10 +129,6 @@ deadDrop()
             /* wait until game starts to allow dead drop countdown to begin */
         	// gameFlagWait( "prematch_done" );
         	gameFlagWait( "dead_drop" );
-        	// if ( !gameFlag( "dead_drop" ) )
-            // {
-    		// 	wait ( level.prematchPeriodEnd - 1 );
-            // }
 
             if(isDefined(self.ddTime))
                 self thread deaddropFillingUpTimer();
@@ -148,20 +144,16 @@ deadDrop()
                 self display(false); /* overlay & hud OFF */
             }
         } 
-        // else if(event == "death")
-        // {
-        //     self.timerStopped = true;
-        // }
+        if(event == "death")
+        {
+            /* idk */
+        }
         else 
         {
-            // self display(false); /* overlay & hud OFF */
+            /* idk */
         }
     }
 }
-
-/*
-if(isAlive(self))
-*/
 
 deaddropFillingUpTimer()
 {
@@ -194,9 +186,7 @@ deaddropFillingUpTimer()
         self.deaddrophud[2].color = (1,1,1);
     }
 
-    // self.ddTime = time;
-
-    while( time != 0 /* && self.timerStopped != true */ )
+    while( time != 0 )
     {
         self.pers["refilling"] = true;
         wait 1;
@@ -213,12 +203,6 @@ deaddropFillingUpTimer()
         }
     }
     self __givePlayerDeadDrop();
-
-    // if( self.timerStopped != true && time <= 0 )
-    // {
-        // self playSoundToPlayer( "fasten_seatbelts", self );
-        // self givePlayerDeadDrop();
-    // }
 }
 
 __givePlayerDeadDrop()
@@ -230,10 +214,10 @@ __givePlayerDeadDrop()
 
 givePlayerDeadDrop()
 {
-    // self thread ddBind();
+    // self thread ddBind(); // moved this to onPlayerConnected()
     self.pers["deadDropReady"] = true;
     self.pers["refilling"] = false;
-    self iPrintLnBold( "Dead Drop Ready! Press " + level.deaddropbindVISUAL);
+    self iPrintLnBold( "Dead Drop Ready! Press ^3" + level.deaddropbindVISUAL);
     self display(false); /* overlay & hud OFF */
 }
 
