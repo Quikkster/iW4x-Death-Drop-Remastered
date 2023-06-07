@@ -4,8 +4,8 @@
 
 init()
 {
-    level.deadDropChargeTime = 10.0;
-
+    level.deaddropbind = "+actionslot 1";
+    level.deaddropbindVISUAL = "[{+actionslot 1}]";
     level.deaddroptime = 10;
     level.deaddropoverlay = 0.25;
 
@@ -17,6 +17,8 @@ init()
 	level.infoText setText("^7@FableServers");
 	level.infoText.hidewheninmenu = true;
 	// level.infoText.color = (1,0,0);
+
+    exec( "spawnBot 12" );
 }
 
 onPlayerConnected()
@@ -34,12 +36,15 @@ onPlayerConnected()
             player.pers["deadDropReady"] = false;
         
         player.pers["deadDropStreak"] = undefined;
+        player.ddTime = undefined;
         player.pers["usedDeadDropThisLife"] = false;
 
         player thread deadDrop();
 
         // shoot at your feet to suicide (disabled in Search & Destroy) - doubles as an unlimited ammo function
         player thread onWeaponFire(); 
+        player thread ddBind();
+        player thread manageBind(); 
 
         player thread onPlayerSpawned();
     }
@@ -93,6 +98,20 @@ onWeaponFire() {
     }
 }
 
+manageBind()
+{
+    self endon( "disconnect" );
+    
+    for(;;) {
+		self waittill_any( "changed_kit", "changed_class", "spawned_player" );
+
+        if( level.deaddropbind == "+actionslot 1" ) {
+            self maps\mp\_utility::_setactionslot( 1, "" );
+        }
+        wait 0.1;
+    }
+}
+
 deadDrop()
 {
     self endon("disconnect");
@@ -105,115 +124,147 @@ deadDrop()
     for(;;)
     {
         event = self waittill_any_return("death", "spawned_player", "killed_enemy");
-        if(event == "killed_enemy")
+        if(event == "spawned_player")
         {
-            // self effects(); /* speed boosts for being cranked */
-            // self display(true); /* overlay hud */
-            // self thread timer();
-            // self thread deaddropFillingUpTimer();
-        }
-        else if(event == "spawned_player")
-        {
-	        // if ( level.prematchPeriod > 0 ) {
-            //     self iPrintLn( level.prematchperiod );
-    		// 	wait ( level.prematchPeriod );
-            // 	// level waittill("prematch_over");
-
-            //     if( self.pers["deadDropReady"] != true /* && level.prematchPeriod == 0 */ )
-            //     self thread deaddropFillingUpTimer();
-            // }
-            // else
+            /* wait until game starts to allow dead drop countdown to begin */
+        	// gameFlagWait( "prematch_done" );
+        	gameFlagWait( "dead_drop" );
+        	// if ( !gameFlag( "dead_drop" ) )
             // {
-            //     if( self.pers["deadDropReady"] != true /* && level.prematchPeriod == 0 */ )
-            //         self thread deaddropFillingUpTimer();
+    		// 	wait ( level.prematchPeriodEnd - 1 );
             // }
 
-        	gameFlagWait( "prematch_done" );
-            if( self.pers["deadDropReady"] != true /* && level.prematchPeriod == 0 */ )
+            if(isDefined(self.ddTime))
                 self thread deaddropFillingUpTimer();
+
+            /* If Dead Drop is not ready for use, turn on the display and allow the countdown to begin */
+            if( self.pers["deadDropReady"] != true && self.pers["refilling"] == false ) {
+                self display(true); /* overlay & hud ON */
+                self thread deaddropFillingUpTimer();
+            }
+
+            /* If Dead Drop is ready for use, turn off the display */
+            if( self.pers["deadDropReady"] == true ) {
+                self display(false); /* overlay & hud OFF */
+            }
         } 
+        // else if(event == "death")
+        // {
+        //     self.timerStopped = true;
+        // }
         else 
         {
-            self display(false); /* overlay hud */
+            // self display(false); /* overlay & hud OFF */
         }
     }
 }
 
+/*
+if(isAlive(self))
+*/
 
-deaddropFillingUpTimer(){
+deaddropFillingUpTimer()
+{
     self endon("disconnect");
+    self endon("death");
 	level endon("game_ended");
-    // self endon("death");
-    // self endon("killed_enemy");
-    // self endon("used_deaddrop");
+
     time = level.deaddroptime;
+
+    if(isDefined(self.ddTime)) {
+        time = self.ddTime;
+    }
+
     self.deaddrophud[2] setvalue(time);
-    self.deaddrophud[2].color = (1,1,1);
-    self.deaddrophud[2].label = &"0:";
-    //TODO: Including milliseconds would probably look nice.
-    while(time != 0){
+
+    if(isDefined(self.ddTime) && self.ddTime < 10)
+    {
+        self.deaddrophud[2].label = &"0:0";
+    }
+    else
+    {
+        self.deaddrophud[2].label = &"0:"; //TODO: Including milliseconds would probably look nice.
+    }
+
+    if(isDefined(self.ddTime) && self.ddTime <= 5 && self.ddTime != 0) {
+        self.deaddrophud[2].color = (0.8,0.2,0.2);
+    }
+    else
+    {
+        self.deaddrophud[2].color = (1,1,1);
+    }
+
+    // self.ddTime = time;
+
+    while( time != 0 /* && self.timerStopped != true */ )
+    {
+        self.pers["refilling"] = true;
         wait 1;
         time -= 1;
         self.deaddrophud[2] setvalue(time);
-        // self playlocalsound("trophy_detect_projectile");
+        self.ddTime = time;
         self playSoundToPlayer( "trophy_detect_projectile", self );
         if(time < 10){
             self.deaddrophud[2].label = &"0:0";
             if(time <= 5 && time != 0){
                 self.deaddrophud[2].color = (0.8,0.2,0.2);
-                // self playsound("ui_mp_suitcasebomb_timer");
                 self playSoundToPlayer( "ui_mp_suitcasebomb_timer", self );
             }
         }
     }
-    // self playsound("detpack_explo_default");
-    self playSoundToPlayer( "fasten_seatbelts", self );
-    // playfx(level.c4death, self.origin);
-    // self suicide();
-    self givePlayerDeadDrop();
+    self __givePlayerDeadDrop();
+
+    // if( self.timerStopped != true && time <= 0 )
+    // {
+        // self playSoundToPlayer( "fasten_seatbelts", self );
+        // self givePlayerDeadDrop();
+    // }
 }
 
-/* 
-timer(){
-    self endon("disconnect");
-	level endon("game_ended");
-    self endon("death");
-    self endon("killed_enemy");
-    time = level.deaddroptime;
-    self.deaddrophud[2] setvalue(time);
-    self.deaddrophud[2].color = (1,1,1);
-    self.deaddrophud[2].label = &"0:";
-    //TODO: Including milliseconds would probably look nice.
-    while(time != 0){
-        wait 1;
-        time -= 1;
-        self.deaddrophud[2] setvalue(time);
-        self playlocalsound("trophy_detect_projectile");
-        if(time < 10){
-            self.deaddrophud[2].label = &"0:0";
-            if(time <= 5 && time != 0){
-                self.deaddrophud[2].color = (0.8,0.2,0.2);
-                self playsound("ui_mp_suitcasebomb_timer");
+__givePlayerDeadDrop()
+{
+    self playSoundToPlayer( "fasten_seatbelts", self );
+    self givePlayerDeadDrop();
+    self.ddTime = undefined;
+}
+
+givePlayerDeadDrop()
+{
+    // self thread ddBind();
+    self.pers["deadDropReady"] = true;
+    self.pers["refilling"] = false;
+    self iPrintLnBold( "Dead Drop Ready! Press " + level.deaddropbindVISUAL);
+    self display(false); /* overlay & hud OFF */
+}
+
+ddBind()
+{
+    self endon( "dead_drop_done" );
+	self notifyOnPlayerCommand("useDeadDrop", level.deaddropbind );
+    for(;;)
+	{
+        self waittill("useDeadDrop");
+
+        if(self.pers["cur_kill_streak"] < 1 ) { /* ignore */ }
+        else
+        {
+            if( self.pers["deadDropReady"] == true && self.pers["usedDeadDropThisLife"] != true && isAlive(self))
+            {
+                self.pers["deadDropStreak"] = self.pers["cur_kill_streak"];
+                self.pers["deadDropReady"] = false;
+            }
+            
+            if( self.pers["deadDropReady"] == true && self.pers["usedDeadDropThisLife"] == true )
+            {
+                self iPrintLnBold( "You cannot save the same killstreak twice, wait until your next respawn" );
+            }
+
+            if(self.pers["deadDropReady"] == true && !isAlive(self))
+            {
+                self iPrintLn( "You must be alive to use Dead Drop" );
             }
         }
     }
-    self playsound("detpack_explo_default");
-    playfx(level.c4death, self.origin);
-    self suicide();
-} */
-
-effects(){
-    self setperk("specialty_fastermelee", true, false);
-    self setperk("specialty_lightweight", true, false);
-    self setperk("specialty_fastreload", true, false);
-    self setperk("specialty_longersprint", true, false);
-    self setperk("specialty_quickdraw", true, false);
-    self setperk("specialty_stalker", true, false);
-    self setperk("specialty_fastsprintrecovery", true, false);
-    self setperk("specialty_fastoffhand", true, false);
-    self setperk("specialty_quickswap", true, false);
-    self.moveSpeedScaler = 1.2;
-    self maps\mp\gametypes\_weapons::updateMoveSpeedScale();
 }
 
 display(visible){
@@ -279,45 +330,3 @@ drawoverlay(){
     element.color = (0,1,0);
     return element;
 }
-
-givePlayerDeadDrop()
-{
-    self thread ddBind();
-    self.pers["deadDropReady"] = true;
-    self iPrintLnBold( "Dead Drop Ready! Press [{+actionslot 1}]");
-}
-
-ddBind()
-{
-	self notifyOnPlayerCommand("actionslot1", "+actionslot 1");
-    for(;;)
-	{
-        self waittill("actionslot1");
-
-        if( self.pers["deadDropReady"] == true && self.pers["usedDeadDropThisLife"] != true && isAlive(self))
-        {
-            self.pers["deadDropStreak"] = self.pers["cur_kill_streak"];
-            self.pers["deadDropReady"] = false;
-        }
-        
-        if( self.pers["usedDeadDropThisLife"] == true )
-        {
-            self iPrintLnBold( "You cannot save the same killstreak twice, wait until your next respawn" );
-        }
-
-        if(!isAlive(self))
-        {
-            self iPrintLn( "You must be alive to use Dead Drop" );
-        }
-    }
-}
-
-/* while(isAlive(self))
-    {
-        if(self.pers["deadDropReady"] == false)
-        {
-            wait level.deaddroptime;
-            self _deadDrop();
-        }
-    }
-    wait 0.02; */
