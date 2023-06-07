@@ -32,25 +32,43 @@ killstreakPlayer()
     self endon ("disconnect");
 
     self.hudkillstreak = createFontString ("Objective", 1);
-    self.hudkillstreak setPoint ("CENTER", "TOP", "CENTER", 20);
+    self.hudkillstreak setPoint ("CENTER", "TOP", "CENTER", 0);
     self.hudkillstreak.label = &"^3 Killstreak: ^7";
+    self.hudkillstreak.alpha = 0;
     self.hudkillstreak.hideWhenInMenu = true;
 
     self.hudDeadDropStreak = createFontString ("Objective", 1);
-    self.hudDeadDropStreak setPoint ("CENTER", "TOP", "CENTER", 30);
+    self.hudDeadDropStreak setPoint ("CENTER", "TOP", "CENTER", 10);
     self.hudDeadDropStreak.label = &"^3 Deaddrop Streak: ^7";
+    self.hudDeadDropStreak.alpha = 0;
     self.hudDeadDropStreak.hideWhenInMenu = true;
 
     self.deadDeadDropReady = createFontString ("Objective", 1);
-    self.deadDeadDropReady setPoint ("CENTER", "TOP", "CENTER", 40);
-    self.deadDeadDropReady.label = &"^3 Is Deaddrop Ready?: ^7";
+    self.deadDeadDropReady setPoint ("CENTER", "TOP", "CENTER", 20);
+    self.deadDeadDropReady.label = &"^3 :flare: ^7";
+    self.deadDeadDropReady.alpha = 0;
     self.deadDeadDropReady.hideWhenInMenu = true;
+
+    // self.hudkillstreak.alpha = 0;
     
     while(true)
     {
-        self.hudkillstreak setValue(self.pers["cur_kill_streak"]);
-        self.hudDeadDropStreak setValue(self.pers["deadDropStreak"]);
-        self.deadDeadDropReady setValue(self.pers["deadDropReady"]);
+        if(isDefined(self.pers["cur_kill_streak"]) && self.pers["cur_kill_streak"] > 0 ) {
+            self.hudkillstreak.alpha = 1;
+            self.hudkillstreak setValue(self.pers["cur_kill_streak"]);
+        }
+
+        if(isDefined(self.pers["deadDropReady"]) && self.pers["deadDropReady"] > 0 ) {
+            self.deadDeadDropReady.alpha = 1;
+            // self.deadDeadDropReady setValue(self.pers["deadDropReady"]);
+            self.deadDeadDropReady.label = &"^3 Deaddrop Available :flare: ^7";
+        }
+
+        if(isDefined(self.pers["deadDropStreak"]) && self.pers["deadDropStreak"] > 0 ) {
+            self.hudDeadDropStreak.alpha = 1;
+            self.hudDeadDropStreak setValue(self.pers["deadDropStreak"]);
+        }
+
         wait 0.5;
     }
 }
