@@ -1,6 +1,1 @@
 # VanguardDeadDrop
-
-
-sss 
-
-hello 
