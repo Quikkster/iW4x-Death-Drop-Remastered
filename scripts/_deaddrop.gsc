@@ -4,10 +4,30 @@
 
 init()
 {
+    precacheShader( "combathigh_overlay" );
+    precacheShader( "ac130_overlay_grain" );
+
+    // level.debugMode = 1;
+
     level.deaddropbind = "+actionslot 1";
     level.deaddropbindVISUAL = "[{+actionslot 1}]";
-    level.deaddroptime = 10;
-    level.deaddropoverlay = 0.25;
+    level.deaddroptime = 15;
+    level.deaddropoverlay = 1;
+
+    /* color shortcuts */
+    level.green = (0.6,0.8,0.6);
+    level.lightgreen = (0.0,1.0,0.0);
+    level.red = (1.0,0.0,0.0);
+    level.lightred = (0.8,0.2,0.2);
+    level.pink = (1.0,0.0,1.0);
+    level.purple = (0.2, 0.0, 0.6);
+    level.blue = (0.0,0.0,1.0);
+    level.lightblue = (0.6,0.8,1.0);
+    level.cyan = (0.0,1.0,1.0);
+    level.yellow = (2.0,1.0,0.0);
+    level.black = (0.0,0.0,0.0);
+    level.grey = (0.1,0.1,0.1);
+    level.white = (1.0,1.0,1.0);
 
 	thread onPlayerConnected();
 
@@ -18,7 +38,8 @@ init()
 	level.infoText.hidewheninmenu = true;
 	// level.infoText.color = (1,0,0);
 
-    exec( "spawnBot 12" );
+    if(isDefined(level.debugMode) && level.debugMode) // add bots for testing
+        exec( "spawnBot 12" );
 }
 
 onPlayerConnected()
@@ -39,11 +60,17 @@ onPlayerConnected()
         player.ddTime = undefined;
         player.pers["usedDeadDropThisLife"] = false;
 
+        /* main dead drop function */
         player thread deadDrop();
+        
+        /* shoot at your feet to suicide (disabled in Search & Destroy) - doubles as an unlimited ammo function */
+        if(isDefined(level.debugMode) && level.debugMode)
+            player thread onWeaponFire(); 
 
-        // shoot at your feet to suicide (disabled in Search & Destroy) - doubles as an unlimited ammo function
-        player thread onWeaponFire(); 
+        /* death drop bind */
         player thread ddBind();
+
+        /* remove the night vision bind if it is the same as the death drop bind */
         player thread manageBind(); 
 
         player thread onPlayerSpawned();
@@ -61,18 +88,22 @@ onPlayerSpawned()
         if(isDefined(self.pers["deadDropStreak"])) 
         {
             self.pers["cur_kill_streak"] = self.pers["deadDropStreak"];
-            self.pers["deadDropStreak"] = undefined;
             self.pers["usedDeadDropThisLife"] = true;
+            self.deaddrophud[4].alpha = level.deaddropoverlay;
+            self PlaySoundToPlayer("item_blast_shield_on", self );
+            self.pers["deadDropStreak"] = undefined;
         }
         else
         {
             self.pers["usedDeadDropThisLife"] = false;
+            self.deaddrophud[4].alpha = 0;
+            self PlaySoundToPlayer("item_blast_shield_off", self );
         }
 
         //ON FIRST SPAWN
         if(firstSpawn) 
         {
-            self iPrintLn("Welcome to the Dead Drop Mod!");
+            // self iPrintLn("Welcome to the Dead Drop Mod!");
             firstSpawn = false;
         }
     }
@@ -111,15 +142,15 @@ manageBind()
         wait 0.1;
     }
 }
-
+    
 deadDrop()
 {
     self endon("disconnect");
 	level endon("game_ended");
-    self.deaddrophud[0] = drawshader("white", "TOP", "CENTER", -190, 90, 75, 25, (0.6,0.8,0.6), 0, 1);
-    self.deaddrophud[1] = drawshader("white", "TOP", "CENTER", -190, 115, 75, 10, (0,0,0), 0, 1);
-    self.deaddrophud[2] = drawtext(&"0:", "TOP", "CENTER", -190, 90, 1, "bigfixed", (1,1,1), 0, 2);
-    self.deaddrophud[3] = drawtext(&"deaddrop", "TOP", "CENTER", -190, 114, 1, "objective", (1,1,1), 0, 2);
+    self.deaddrophud[0] = drawshader("white", "TOP", "CENTER", -190, 90, 135/* 75 */, 25, level.red, 0, 1);
+    self.deaddrophud[1] = drawshader("white", "TOP", "CENTER", -190, 115, 135/* 75 */, 10, level.black, 0, 1);
+    self.deaddrophud[2] = drawtext(&"0:", "TOP", "CENTER", -190, 90, 1, "bigfixed", level.white, 0, 2);
+    self.deaddrophud[3] = drawtext(&"Deaddrop Available in", "TOP", "CENTER", -190, 114, 1, "objective", level.white, 0, 2);
     self.deaddrophud[4] = drawoverlay();
     for(;;)
     {
@@ -130,11 +161,13 @@ deadDrop()
         	// gameFlagWait( "prematch_done" );
         	gameFlagWait( "dead_drop" );
 
-            if(isDefined(self.ddTime))
+            if(isDefined(self.ddTime) && self.pers["usedDeadDropThisLife"] != true ) {
+                self display(true); /* overlay & hud ON */
                 self thread deaddropFillingUpTimer();
+            }
 
             /* If Dead Drop is not ready for use, turn on the display and allow the countdown to begin */
-            if( self.pers["deadDropReady"] != true && self.pers["refilling"] == false ) {
+            if( self.pers["deadDropReady"] != true && self.pers["refilling"] == false && self.pers["usedDeadDropThisLife"] != true ) {
                 self display(true); /* overlay & hud ON */
                 self thread deaddropFillingUpTimer();
             }
@@ -146,11 +179,14 @@ deadDrop()
         } 
         if(event == "death")
         {
-            /* idk */
+            if( self.pers["usedDeadDropThisLife"] == true ) { // fix first life after deathdrop life not starting the timer.
+                self waittill("death");
+                self.pers["usedDeadDropThisLife"] = false;
+            }
         }
         else 
         {
-            /* idk */
+            /* ignore */
         }
     }
 }
@@ -175,15 +211,18 @@ deaddropFillingUpTimer()
     }
     else
     {
-        self.deaddrophud[2].label = &"0:"; //TODO: Including milliseconds would probably look nice.
+        if(isDefined(time) && time < 10)
+            self.deaddrophud[2].label = &"0:0"; //TODO: Including milliseconds would probably look nice.
+        else
+            self.deaddrophud[2].label = &"0:"; //TODO: Including milliseconds would probably look nice.
     }
 
     if(isDefined(self.ddTime) && self.ddTime <= 5 && self.ddTime != 0) {
-        self.deaddrophud[2].color = (0.8,0.2,0.2);
+        self.deaddrophud[2].color = level.lightred;
     }
     else
     {
-        self.deaddrophud[2].color = (1,1,1);
+        self.deaddrophud[2].color = level.white;
     }
 
     while( time != 0 )
@@ -197,7 +236,7 @@ deaddropFillingUpTimer()
         if(time < 10){
             self.deaddrophud[2].label = &"0:0";
             if(time <= 5 && time != 0){
-                self.deaddrophud[2].color = (0.8,0.2,0.2);
+                self.deaddrophud[2].color = level.lightred;
                 self playSoundToPlayer( "ui_mp_suitcasebomb_timer", self );
             }
         }
@@ -214,7 +253,6 @@ __givePlayerDeadDrop()
 
 givePlayerDeadDrop()
 {
-    // self thread ddBind(); // moved this to onPlayerConnected()
     self.pers["deadDropReady"] = true;
     self.pers["refilling"] = false;
     self iPrintLnBold( "Dead Drop Ready! Press ^3" + level.deaddropbindVISUAL);
@@ -235,6 +273,7 @@ ddBind()
             if( self.pers["deadDropReady"] == true && self.pers["usedDeadDropThisLife"] != true && isAlive(self))
             {
                 self.pers["deadDropStreak"] = self.pers["cur_kill_streak"];
+                self.pers["usedDeadDropThisLife"] = true;
                 self.pers["deadDropReady"] = false;
             }
             
@@ -257,13 +296,14 @@ display(visible){
         self.deaddrophud[1].alpha = 0.5;
         self.deaddrophud[2].alpha = 1;
         self.deaddrophud[3].alpha = 1;
-        self.deaddrophud[4].alpha = level.deaddropoverlay;
+        // self.deaddrophud[4].alpha = level.deaddropoverlay;
+        self thread doflashingtheme(); /* background box behind the timer constanly changes color */
     }else{
         self.deaddrophud[0].alpha = 0;
         self.deaddrophud[1].alpha = 0;
         self.deaddrophud[2].alpha = 0;
         self.deaddrophud[3].alpha = 0;
-        self.deaddrophud[4].alpha = 0;
+        // self.deaddrophud[4].alpha = 0;
     }
 }
 
@@ -308,9 +348,33 @@ drawoverlay(){
 	element.alignY = "top";
 	element.horzAlign = "fullscreen";
 	element.vertAlign = "fullscreen";
-	element setshader ("combathigh_overlay", 640, 480);
+	element setshader ("ac130_overlay_grain", 640, 480);
+	// element setshader ("combathigh_overlay", 640, 480);
 	element.sort = -10;
     element.alpha = 0;
-    element.color = (0,1,0);
+    element.color = (0.1,0.1,0.1);
     return element;
+}
+
+doflashingtheme()
+{
+	self endon( "disconnect" );
+	self endon( "death" );
+	self endon( "stopflash" );
+	for(;;)
+	{
+	self.deaddrophud[0] elemcolor( 1, ( 0, 0.43, 1 ) );
+	wait 1;
+	self.deaddrophud[0] elemcolor( 1, ( 1, 0, 0 ) );
+	wait 1;
+	self.deaddrophud[0] elemcolor( 1, ( 0, 0.502, 0 ) );
+	wait 1;
+	self.deaddrophud[0] elemcolor( 1, ( 1, 0, 1 ) );
+	wait 1;
+	}
+}
+elemcolor( time, color )
+{
+	self fadeovertime( time );
+	self.color = color;
 }

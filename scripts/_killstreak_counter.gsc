@@ -44,8 +44,8 @@ killstreakPlayer()
     // self.hudDeadDropStreak.hideWhenInMenu = true;
 
     self.deadDeadDropReady = createFontString ("Objective", 1);
-    self.deadDeadDropReady setPoint ("CENTER", "TOP", "CENTER", 20);
-    self.deadDeadDropReady.label = &"^3 :flare: ^7";
+    self.deadDeadDropReady setPoint ("CENTER", "TOP", "CENTER", 400);
+    self.deadDeadDropReady.label = &"^ :flare: ^7";
     self.deadDeadDropReady.alpha = 0;
     self.deadDeadDropReady.hideWhenInMenu = true;
 
@@ -65,7 +65,7 @@ killstreakPlayer()
         if(isDefined(self.pers["deadDropReady"]) && self.pers["deadDropReady"] > 0 ) {
             self.deadDeadDropReady.alpha = 1;
             // self.deadDeadDropReady setValue(self.pers["deadDropReady"]);
-            self.deadDeadDropReady.label = &"^3 Deaddrop Available :flare: ^7";
+            self.deadDeadDropReady.label = &" Deaddrop Available :flare: ^7";
         }
         else
         {
