@@ -7,11 +7,11 @@ init()
     precacheShader( "combathigh_overlay" );
     precacheShader( "ac130_overlay_grain" );
 
-    // level.debugMode = 1;
+    level.debugMode = 1;
 
     level.deaddropbind = "+actionslot 1";
     level.deaddropbindVISUAL = "[{+actionslot 1}]";
-    level.deaddroptime = 15;
+    level.deaddroptime = 2;
     level.deaddropoverlay = 1;
 
     /* color shortcuts */
@@ -60,6 +60,9 @@ onPlayerConnected()
         player.ddTime = undefined;
         player.pers["usedDeadDropThisLife"] = false;
 
+        player.flashingTheme = false;
+        player.hud_EventPopup = player createEventPopup();
+
         /* main dead drop function */
         player thread deadDrop();
         
@@ -85,12 +88,15 @@ onPlayerSpawned()
     {
         self waittill("spawned_player");
 
+        /* give player their saved killstreak */
         if(isDefined(self.pers["deadDropStreak"])) 
         {
             self.pers["cur_kill_streak"] = self.pers["deadDropStreak"];
             self.pers["usedDeadDropThisLife"] = true;
             self.deaddrophud[4].alpha = level.deaddropoverlay;
-            self PlaySoundToPlayer("item_blast_shield_on", self );
+            // self PlaySoundToPlayer("item_blast_shield_on", self );
+            self EventPopup( "Deathdrop Killstreak Loaded", ( 1, 0, 0.5 ), 1 );
+	        self playLocalSound( "copycat_steal_class" );
             self.pers["deadDropStreak"] = undefined;
         }
         else
@@ -147,7 +153,7 @@ deadDrop()
 {
     self endon("disconnect");
 	level endon("game_ended");
-    self.deaddrophud[0] = drawshader("white", "TOP", "CENTER", -190, 90, 135/* 75 */, 25, level.red, 0, 1);
+    self.deaddrophud[0] = drawshader("white", "TOP", "CENTER", -190, 90, 135/* 75 */, 25, level.green, 0, 1);
     self.deaddrophud[1] = drawshader("white", "TOP", "CENTER", -190, 115, 135/* 75 */, 10, level.black, 0, 1);
     self.deaddrophud[2] = drawtext(&"0:", "TOP", "CENTER", -190, 90, 1, "bigfixed", level.white, 0, 2);
     self.deaddrophud[3] = drawtext(&"Deaddrop Available in", "TOP", "CENTER", -190, 114, 1, "objective", level.white, 0, 2);
@@ -246,7 +252,7 @@ deaddropFillingUpTimer()
 
 __givePlayerDeadDrop()
 {
-    self playSoundToPlayer( "fasten_seatbelts", self );
+    self maps\mp\gametypes\_hud_message::oldNotifyMessage( "Dead Drop", "Press ^3" + level.deaddropbindVISUAL + " to save your current killstreak", "equipment_flare", ( 1, 0, 0 ), "mp_killstreak_radar", 5 );
     self givePlayerDeadDrop();
     self.ddTime = undefined;
 }
@@ -255,7 +261,6 @@ givePlayerDeadDrop()
 {
     self.pers["deadDropReady"] = true;
     self.pers["refilling"] = false;
-    self iPrintLnBold( "Dead Drop Ready! Press ^3" + level.deaddropbindVISUAL);
     self display(false); /* overlay & hud OFF */
 }
 
@@ -267,27 +272,81 @@ ddBind()
 	{
         self waittill("useDeadDrop");
 
+        /* avoid accidentally wasting this on a 0 killstreak */
         if(self.pers["cur_kill_streak"] < 1 ) { /* ignore */ }
         else
         {
+            /* save current killstreak */
             if( self.pers["deadDropReady"] == true && self.pers["usedDeadDropThisLife"] != true && isAlive(self))
             {
                 self.pers["deadDropStreak"] = self.pers["cur_kill_streak"];
                 self.pers["usedDeadDropThisLife"] = true;
+                self EventPopup( "Killstreak Saved ^7[^3" + self.pers["deadDropStreak"] + "^7]", ( 1, 0, 0.5 ), 1 );
+                self playLocalSound( "mp_card_slide" );
+                
                 self.pers["deadDropReady"] = false;
             }
             
+            /* no double dipping */
             if( self.pers["deadDropReady"] == true && self.pers["usedDeadDropThisLife"] == true )
             {
                 self iPrintLnBold( "You cannot save the same killstreak twice, wait until your next respawn" );
             }
 
+            /* player is dead */
             if(self.pers["deadDropReady"] == true && !isAlive(self))
             {
                 self iPrintLn( "You must be alive to use Dead Drop" );
             }
         }
     }
+}
+
+createEventPopup()
+{
+	hud_EventPopup = newClientHudElem( self );
+	hud_EventPopup.children = [];		
+	hud_EventPopup.horzAlign = "center";
+	hud_EventPopup.vertAlign = "middle";
+	hud_EventPopup.alignX = "center";
+	hud_EventPopup.alignY = "middle";
+    hud_EventPopup.x = 50;
+    hud_EventPopup.y = -35;
+	hud_EventPopup.font = "hudbig";
+	hud_EventPopup.fontscale = 0.65;
+	hud_EventPopup.archived = false;
+	hud_EventPopup.color = (0.5,0.5,0.5);
+	hud_EventPopup.sort = 10000;
+	hud_EventPopup.elemType = "msgText";
+	hud_EventPopup maps\mp\gametypes\_hud::fontPulseInit( 3.0 );
+	return hud_EventPopup;
+}
+
+EventPopup( event, hudColor, glowAlpha )
+{
+	self endon( "disconnect" );
+
+	self notify( "EventPopup" );
+	self endon( "EventPopup" );
+
+	wait ( 0.05 );
+		
+	if ( !isDefined( hudColor ) )
+		hudColor = (1,1,0.5);
+	if ( !isDefined( glowAlpha ) )
+		glowAlpha = 0;
+
+	self.hud_EventPopup.color = hudColor;
+	self.hud_EventPopup.glowColor = hudColor;
+	self.hud_EventPopup.glowAlpha = glowAlpha;
+
+	self.hud_EventPopup setText(event);
+	self.hud_EventPopup.alpha = 0.85;
+
+	wait ( 1.0 );
+	
+	self.hud_EventPopup fadeOverTime( 0.75 );
+	self.hud_EventPopup.alpha = 0;
 }
 
 display(visible){
@@ -297,7 +356,8 @@ display(visible){
         self.deaddrophud[2].alpha = 1;
         self.deaddrophud[3].alpha = 1;
         // self.deaddrophud[4].alpha = level.deaddropoverlay;
-        self thread doflashingtheme(); /* background box behind the timer constanly changes color */
+        if(self.flashingTheme)
+            self thread doflashingtheme(); /* background box behind the timer constanly changes color */
     }else{
         self.deaddrophud[0].alpha = 0;
         self.deaddrophud[1].alpha = 0;
